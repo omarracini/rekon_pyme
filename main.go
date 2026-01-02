@@ -29,6 +29,8 @@ func main() {
 	r := gin.Default()
 	r.POST("/movements", handler.CreateMovement)
 	r.POST("/invoices", handler.CreateInvoice)
+	//r.GET("/invoices", handler.GetInvoices)
+	r.GET("/invoices", handler.ListInvoices)
 
 	log.Println("Servidor iniciado en http://localhost:8080")
 	r.Run(":8080")

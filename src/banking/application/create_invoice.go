@@ -2,6 +2,7 @@ package application
 
 import (
 	"time"
+
 	"github.com/google/uuid"
 	"github.com/omarracini/rekon_pyme/src/banking/domain"
 	sharedDomain "github.com/omarracini/rekon_pyme/src/shared/domain"
@@ -38,4 +39,8 @@ func (uc *CreateInvoiceUseCase) Execute(req CreateInvoiceRequest) error {
 	}
 
 	return uc.repo.SaveInvoice(invoice)
+}
+
+func (uc *CreateInvoiceUseCase) ExecuteList() ([]domain.Invoice, error) {
+	return uc.repo.FindAllInvoices()
 }

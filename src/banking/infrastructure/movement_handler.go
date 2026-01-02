@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/omarracini/rekon_pyme/src/banking/application"
 )
@@ -14,7 +15,7 @@ type MovementHandler struct {
 func NewMovementHandler(muc *application.CreateMovementUseCase, iuc *application.CreateInvoiceUseCase) *MovementHandler {
 	return &MovementHandler{
 		movementuseCase: muc,
-		invoiceUseCase: iuc,
+		invoiceUseCase:  iuc,
 	}
 }
 
@@ -42,4 +43,13 @@ func (h *MovementHandler) CreateInvoice(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"message": "Factura registrada con éxito"})
+}
+
+func (h *MovementHandler) ListInvoices(c *gin.Context) {
+	invoices, err := h.invoiceUseCase.ExecuteList()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudieron obtener las facturas"})
+		return
+	}
+	c.JSON(http.StatusOK, invoices)
 }
