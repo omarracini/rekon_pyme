@@ -33,3 +33,24 @@ func (r *PostgresBankRepository) Save(m *domain.BankMovement) error {
 func (r *PostgresBankRepository) FindAllMovements(accountID string) ([]domain.BankMovement, error) {
 	return []domain.BankMovement{}, nil
 }
+
+func (r *PostgresBankRepository) SaveInvoice(i *domain.Invoice) error {
+	query := `INSERT INTO invoices (id, number, provider, date, due_date, amount, currency, status) 
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+	
+	_, err := r.db.Exec(query, 
+		i.ID, 
+		i.Number, 
+		i.Provider, 
+		i.Date, 
+		i.DueDate, 
+		i.Amount.Amount, 
+		string(i.Amount.Currency), 
+		i.Status,
+	)
+	return err
+}
+
+func (r *PostgresBankRepository) FindAllInvoices() ([]domain.Invoice, error) {
+	return []domain.Invoice{}, nil // Implementaremos el listado más adelante
+}

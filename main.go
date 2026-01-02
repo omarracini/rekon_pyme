@@ -19,11 +19,16 @@ func main() {
 
 	// Inyección de dependencias
 	repo := infrastructure.NewPostgresBankRepository(db)
-	useCase := application.NewCreateMovementUseCase(repo)
-	handler := infrastructure.NewMovementHandler(useCase)
+
+	// Casos de uso
+	movUseCase := application.NewCreateMovementUseCase(repo)
+	invUseCase := application.NewCreateInvoiceUseCase(repo)
+
+	handler := infrastructure.NewMovementHandler(movUseCase, invUseCase)
 
 	r := gin.Default()
 	r.POST("/movements", handler.CreateMovement)
+	r.POST("/invoices", handler.CreateInvoice)
 
 	log.Println("Servidor iniciado en http://localhost:8080")
 	r.Run(":8080")

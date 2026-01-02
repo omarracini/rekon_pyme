@@ -7,11 +7,15 @@ import (
 )
 
 type MovementHandler struct {
-	useCase *application.CreateMovementUseCase
+	movementuseCase *application.CreateMovementUseCase
+	invoiceUseCase  *application.CreateInvoiceUseCase
 }
 
-func NewMovementHandler(uc *application.CreateMovementUseCase) *MovementHandler {
-	return &MovementHandler{useCase: uc}
+func NewMovementHandler(muc *application.CreateMovementUseCase, iuc *application.CreateInvoiceUseCase) *MovementHandler {
+	return &MovementHandler{
+		movementuseCase: muc,
+		invoiceUseCase: iuc,
+	}
 }
 
 func (h *MovementHandler) CreateMovement(c *gin.Context) {
@@ -20,9 +24,22 @@ func (h *MovementHandler) CreateMovement(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.useCase.Execute(req); err != nil {
+	if err := h.movementuseCase.Execute(req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"message": "Movimiento registrado con éxito"})
+}
+
+func (h *MovementHandler) CreateInvoice(c *gin.Context) {
+	var req application.CreateInvoiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.invoiceUseCase.Execute(req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"message": "Factura registrada con éxito"})
 }
