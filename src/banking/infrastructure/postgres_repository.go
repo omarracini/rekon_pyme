@@ -71,3 +71,28 @@ func (r *PostgresBankRepository) FindAllInvoices() ([]domain.Invoice, error) {
 	}
 	return invoices, nil
 }
+
+func (r *PostgresBankRepository) Conciliate(movementID string, invoiceID string) error {
+	// Iniciamos la transacción
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Marcar el movimiento como conciliado
+	_, err = tx.Exec("UPDATE movements SET is_conciliated = true WHERE id = $1", movementID)
+	if err != nil {
+		tx.Rollback() // Si falla, deshacemos todo
+		return err
+	}
+
+	// Marcar la factura como pagada
+	_, err = tx.Exec("UPDATE invoices SET status = $1 WHERE id = $2", domain.InvoicePaid, invoiceID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Si ambos salieron bien, confirmamos los cambios en la DB
+	return tx.Commit()
+}

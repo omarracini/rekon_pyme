@@ -23,14 +23,17 @@ func main() {
 	// Casos de uso
 	movUseCase := application.NewCreateMovementUseCase(repo)
 	invUseCase := application.NewCreateInvoiceUseCase(repo)
+	concUseCase := application.NewConciliateUseCase(repo)
 
-	handler := infrastructure.NewMovementHandler(movUseCase, invUseCase)
+	handler := infrastructure.NewMovementHandler(movUseCase, invUseCase, concUseCase)
 
 	r := gin.Default()
+
+	// Rutas
 	r.POST("/movements", handler.CreateMovement)
 	r.POST("/invoices", handler.CreateInvoice)
-	//r.GET("/invoices", handler.GetInvoices)
 	r.GET("/invoices", handler.ListInvoices)
+	r.POST("/conciliations", handler.Conciliate)
 
 	log.Println("Servidor iniciado en http://localhost:8080")
 	r.Run(":8080")

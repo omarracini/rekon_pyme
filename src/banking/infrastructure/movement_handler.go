@@ -10,12 +10,14 @@ import (
 type MovementHandler struct {
 	movementuseCase *application.CreateMovementUseCase
 	invoiceUseCase  *application.CreateInvoiceUseCase
+	conciliateUseCase *application.ConciliateUseCase
 }
 
-func NewMovementHandler(muc *application.CreateMovementUseCase, iuc *application.CreateInvoiceUseCase) *MovementHandler {
+func NewMovementHandler(muc *application.CreateMovementUseCase, iuc *application.CreateInvoiceUseCase, cuc *application.ConciliateUseCase) *MovementHandler {
 	return &MovementHandler{
 		movementuseCase: muc,
 		invoiceUseCase:  iuc,
+		conciliateUseCase: cuc,
 	}
 }
 
@@ -53,3 +55,18 @@ func (h *MovementHandler) ListInvoices(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, invoices)
 }
+
+func (h *MovementHandler) Conciliate(c *gin.Context) {
+	var req application.ConciliateRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos de conciliación inválidos"})
+		return
+	}	
+
+	if err := h.conciliateUseCase.Execute(req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al conciliar movimiento y factura"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Movimiento y factura conciliados con éxito"})
+}	
