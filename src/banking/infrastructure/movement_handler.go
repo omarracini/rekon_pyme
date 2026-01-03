@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -8,16 +9,25 @@ import (
 )
 
 type MovementHandler struct {
-	movementuseCase *application.CreateMovementUseCase
-	invoiceUseCase  *application.CreateInvoiceUseCase
+	movementuseCase   *application.CreateMovementUseCase
+	invoiceUseCase    *application.CreateInvoiceUseCase
 	conciliateUseCase *application.ConciliateUseCase
+	pendingUseCase    *application.GetPendingItemsUseCase
+	getPendingUC      *application.GetPendingMovementsUseCase
 }
 
-func NewMovementHandler(muc *application.CreateMovementUseCase, iuc *application.CreateInvoiceUseCase, cuc *application.ConciliateUseCase) *MovementHandler {
+func NewMovementHandler(
+	muc *application.CreateMovementUseCase,
+	iuc *application.CreateInvoiceUseCase,
+	cuc *application.ConciliateUseCase,
+	puc *application.GetPendingItemsUseCase,
+	gpuc *application.GetPendingMovementsUseCase) *MovementHandler {
 	return &MovementHandler{
-		movementuseCase: muc,
-		invoiceUseCase:  iuc,
+		movementuseCase:   muc,
+		invoiceUseCase:    iuc,
 		conciliateUseCase: cuc,
+		pendingUseCase:    puc,
+		getPendingUC:      gpuc,
 	}
 }
 
@@ -57,16 +67,31 @@ func (h *MovementHandler) ListInvoices(c *gin.Context) {
 }
 
 func (h *MovementHandler) Conciliate(c *gin.Context) {
-	var req application.ConciliateRequest
+	fmt.Println(">>> PETICION RECIBIDA EN HANDLER CONCILIATE") // <--- LOG 1
 
+	var req application.ConciliateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Printf("ERROR JSON: %v\n", err) // <--- LOG 2
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos de conciliación inválidos"})
 		return
-	}	
+	}
+
+	fmt.Printf("INTENTANDO CONCILIAR: Mov=%s, Inv=%s\n", req.MovementID, req.InvoiceID) // <--- LOG 3
 
 	if err := h.conciliateUseCase.Execute(req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al conciliar movimiento y factura"})
+		fmt.Printf("ERROR EN USE CASE: %v\n", err)                          // <--- ESTO ES LO QUE NECESITAMOS SABER
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()}) // Devolvemos el error real
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Movimiento y factura conciliados con éxito"})
-}	
+}
+
+func (h *MovementHandler) GetPending(c *gin.Context) {
+	movements, err := h.getPendingUC.Execute()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se logró obtener los movimientos"})
+		return
+	}
+	c.JSON(http.StatusOK, movements)
+}

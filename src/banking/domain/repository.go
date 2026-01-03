@@ -8,4 +8,11 @@ type BankRepository interface {
 	FindAllInvoices() ([]Invoice, error)
 
 	Conciliate(movementID string, invoiceID string) error
+
+	//Filtros de busqueda
+	FindPendingMovements() ([]BankMovement, error)
+	FindPendingInvoices() ([]Invoice, error)
+	FindMovementByID(id string) (*BankMovement, error)
+	FindInvoiceByID(id string) (*Invoice, error)
+	GetUnconciliatedMovements() ([]*BankMovement, error)
 }

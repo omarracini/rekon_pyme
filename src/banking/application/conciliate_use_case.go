@@ -2,6 +2,7 @@ package application
 
 import (
 	"errors"
+
 	"github.com/omarracini/rekon_pyme/src/banking/domain"
 )
 
@@ -19,14 +20,34 @@ func NewConciliateUseCase(repo domain.BankRepository) *ConciliateUseCase {
 }
 
 func (uc *ConciliateUseCase) Execute(req ConciliateRequest) error {
-	// Aquí podrías añadir validaciones extra, como:
-	// - ¿El movimiento ya estaba conciliado?
-	// - ¿La factura ya estaba pagada?
-	// - ¿Los montos coinciden? (Opcional por ahora)
-    
-	if req.MovementID == "" || req.InvoiceID == "" {
-		return errors.New("el ID del movimiento y de la factura son obligatorios")
+
+	// Buscar el movimiento
+	movement, err := uc.repo.FindMovementByID(req.MovementID)
+	if err != nil {
+		return errors.New("movimiento no encontrado")
 	}
 
+	// Buscar la factura
+	invoice, err := uc.repo.FindInvoiceByID(req.InvoiceID)
+	if err != nil {
+		return errors.New("factura no encontrada")
+	}
+
+	// Validar montos
+	if movement.Amount.Amount != invoice.Amount.Amount {
+		return errors.New("los montos del movimiento y la factura deben ser iguales")
+	}
+
+	// Validar monedas
+	if movement.Amount.Currency != invoice.Amount.Currency {
+		return errors.New("error: las monedas no coinciden")
+	}
+
+	// Validar estado de la conciliación
+	if invoice.Status == domain.InvoicePaid {
+		return errors.New("la factura ya está pagada")
+	}
+
+	// Paso a la DB
 	return uc.repo.Conciliate(req.MovementID, req.InvoiceID)
 }
