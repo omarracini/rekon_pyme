@@ -10,6 +10,6 @@ func NewGetDashboardUseCase(repo domain.BankRepository) *GetDashboardUseCase {
 	return &GetDashboardUseCase{repo: repo}
 }
 
-func (uc *GetDashboardUseCase) Execute() (*domain.DashboardSummary, error) {
+func (uc *GetDashboardUseCase) Execute() ([]domain.DashboardSummary, error) {
 	return uc.repo.GetDashboardSummary()
 }

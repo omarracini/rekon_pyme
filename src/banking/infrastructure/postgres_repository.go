@@ -220,27 +220,63 @@ func (r *PostgresBankRepository) GetUnconciliatedMovements() ([]*domain.BankMove
 	return movements, nil
 }
 
-func (r *PostgresBankRepository) GetDashboardSummary() (*domain.DashboardSummary, error) {
-    summary := &domain.DashboardSummary{Currency: "USD"} // Asumimos USD por ahora
+func (r *PostgresBankRepository) GetDashboardSummary() ([]domain.DashboardSummary, error) {
 
-    // Consulta para sumar totales por estado
-    query := `
+	// Consulta para sumar totales por moneda
+	query := `
         SELECT 
+            currency,
             COALESCE(SUM(CASE WHEN is_conciliated = true THEN amount ELSE 0 END), 0) as reconciled,
             COALESCE(SUM(CASE WHEN is_conciliated = false THEN amount ELSE 0 END), 0) as pending_mov
-        FROM movements`
-    
-    err := r.db.QueryRow(query).Scan(&summary.TotalReconciled, &summary.PendingMovements)
-    if err != nil {
-        return nil, err
-    }
+        FROM movements
+        GROUP BY currency`
 
-    // Consulta para sumar facturas pendientes
-    queryInv := `SELECT COALESCE(SUM(amount), 0) FROM invoices WHERE status = 'PENDING'`
-    err = r.db.QueryRow(queryInv).Scan(&summary.PendingInvoices)
-    if err != nil {
-        return nil, err
-    }
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    return summary, nil
+	summaryMap := make(map[string]*domain.DashboardSummary)
+
+	for rows.Next() {
+		s := domain.DashboardSummary{}
+		if err := rows.Scan(&s.Currency, &s.TotalReconciled, &s.PendingMovements); err != nil {
+			return nil, err
+		}
+		summaryMap[s.Currency] = &s
+	}
+
+	queryInv := `SELECT currency, COALESCE(SUM(amount), 0) FROM invoices WHERE status = 'PENDING' GROUP BY currency`
+	rowsInv, err := r.db.Query(queryInv)
+	if err != nil {
+		return nil, err
+	}
+	defer rowsInv.Close()
+
+	for rowsInv.Next() {
+		var curr string
+		var amt float64
+		if err := rowsInv.Scan(&curr, &amt); err != nil {
+			return nil, err
+		}
+
+		if s, ok := summaryMap[curr]; ok {
+			s.PendingInvoices = amt
+		} else {
+			// Si hay facturas de una moneda que no tiene movimientos aún
+			summaryMap[curr] = &domain.DashboardSummary{
+				Currency:        curr,
+				PendingInvoices: amt,
+			}
+		}
+	}
+
+	// Convertir el mapa a un slice para retornar
+	var result []domain.DashboardSummary
+	for _, v := range summaryMap {
+		result = append(result, *v)
+	}
+
+	return result, nil
 }
