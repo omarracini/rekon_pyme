@@ -1,0 +1,20 @@
+# Ejecutables de Go
+*.exe
+*.exe~
+main
+__debug_bin
+
+# Dependencias (Go las descarga solas, no hace falta subirlas)
+vendor/
+
+# Archivos de entorno y secretos
+.env
+*.log
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Carpeta de node_modules y builds
+dist/
+.next/

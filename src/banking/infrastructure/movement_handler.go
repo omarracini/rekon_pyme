@@ -17,6 +17,7 @@ type MovementHandler struct {
 	getPendingUC      *application.GetPendingMovementsUseCase
 	getPendingInvUC   *application.GetPendingInvoicesUseCase
 	getDashboardUC    *application.GetDashboardUseCase
+	suggestCategoryUC *application.SuggestCategoryUseCase
 }
 
 // Constructor
@@ -27,7 +28,8 @@ func NewMovementHandler(
 	puc *application.GetPendingItemsUseCase,
 	gpuc *application.GetPendingMovementsUseCase,
 	gpiuc *application.GetPendingInvoicesUseCase,
-	gduc *application.GetDashboardUseCase) *MovementHandler {
+	gduc *application.GetDashboardUseCase,
+	scuc *application.SuggestCategoryUseCase) *MovementHandler {
 	return &MovementHandler{
 		movementuseCase:   muc,
 		invoiceUseCase:    iuc,
@@ -36,8 +38,20 @@ func NewMovementHandler(
 		getPendingUC:      gpuc,
 		getPendingInvUC:   gpiuc,
 		getDashboardUC:    gduc,
+		suggestCategoryUC: scuc,
 	}
 }
+
+// CreateMovement godoc
+// @Summary      Crear un nuevo movimiento bancario
+// @Description  Registra un movimiento en la cuenta, validando que el monto sea positivo.
+// @Tags         movements
+// @Accept       json
+// @Produce      json
+// @Param        movement  body      application.CreateMovementRequest  true  "Datos del movimiento"
+// @Success      201       {string}  string  "Created"
+// @Failure      400       {object}  map[string]string
+// @Router       /movements [post]
 
 func (h *MovementHandler) CreateMovement(c *gin.Context) {
 	var req application.CreateMovementRequest
@@ -73,6 +87,17 @@ func (h *MovementHandler) ListInvoices(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, invoices)
 }
+
+// Conciliate godoc
+// @Summary      Conciliar movimiento con factura
+// @Description  Cruza un movimiento bancario con una factura pendiente, validando monto y moneda.
+// @Tags         operations
+// @Accept       json
+// @Produce      json
+// @Param        request  body      infrastructure.ConciliateRequest  true  "IDs del movimiento y la factura"
+// @Success      200      {object}  map[string]string
+// @Failure      400      {object}  map[string]string
+// @Router       /conciliate [post]
 
 func (h *MovementHandler) Conciliate(c *gin.Context) {
 	fmt.Println(">>> PETICION RECIBIDA EN HANDLER CONCILIATE") // <--- LOG 1
@@ -113,6 +138,15 @@ func (h *MovementHandler) GetPendingInvoices(c *gin.Context) {
 	c.JSON(http.StatusOK, invoices)
 }
 
+// GetDashboard godoc
+// @Summary      Obtener resumen financiero
+// @Description  Retorna los totales conciliados y pendientes agrupados por tipo de moneda.
+// @Tags         analytics
+// @Produce      json
+// @Success      200      {array}   domain.DashboardSummary
+// @Failure      500      {object}  map[string]string
+// @Router       /dashboard [get]
+
 func (h *MovementHandler) GetDashboard(c *gin.Context) {
 	summary, err := h.getDashboardUC.Execute()
 	if err != nil {
@@ -120,4 +154,46 @@ func (h *MovementHandler) GetDashboard(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, summary)
+}
+
+// HealthCheck godoc
+// @Summary      Verificar estado del servicio
+// @Description  Retorna el estado actual del backend y su versión.
+// @Tags         monitoring
+// @Produce      json
+// @Success      200      {object}  map[string]string
+// @Router       /health [get]
+
+func (h *MovementHandler) HealthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "up",
+		"service": "rekon-pyme-backend",
+		"version": "1.0.0",
+	})
+}
+
+// SuggestCategory godoc
+// @Summary      Sugerir categoría mediante IA
+// @Description  Analiza el concepto de un movimiento y sugiere una categoría contable usando un modelo de IA.
+// @Tags         ai
+// @Accept       json
+// @Produce      json
+// @Param        concept  query     string  true  "Concepto del movimiento bancario (ej: Starbucks)"
+// @Success      200      {object}  domain.AICategorySuggestion
+// @Failure      400      {object}  map[string]string
+// @Router       /ai/suggest-category [get]
+
+func (h *MovementHandler) SuggestCategory(c *gin.Context) {
+	concept := c.Query("concept")
+	if concept == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "El concepto es requerido"})
+		return
+	}
+
+	suggestion, err := h.suggestCategoryUC.Execute(concept)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, suggestion)
 }
