@@ -1,7 +1,9 @@
 package application
 
 import (
+	"errors"
 	"time"
+
 	"github.com/google/uuid"
 	"github.com/omarracini/rekon_pyme/src/banking/domain"
 	sharedDomain "github.com/omarracini/rekon_pyme/src/shared/domain"
@@ -24,6 +26,17 @@ func NewCreateMovementUseCase(repo domain.BankRepository) *CreateMovementUseCase
 }
 
 func (uc *CreateMovementUseCase) Execute(req CreateMovementRequest) error {
+
+	// Validar importes
+	if req.Amount <= 0 {
+		return errors.New("el monto del movimiento debe ser mayor a cero")
+	}
+
+	//Validar moneda
+	if req.Currency == "" {
+		return errors.New("el tipo de moneda es obligatorio")
+	}
+
 	movement := &domain.BankMovement{
 		ID:            uuid.New().String(),
 		AccountID:     req.AccountID,

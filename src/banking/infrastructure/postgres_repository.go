@@ -219,3 +219,28 @@ func (r *PostgresBankRepository) GetUnconciliatedMovements() ([]*domain.BankMove
 
 	return movements, nil
 }
+
+func (r *PostgresBankRepository) GetDashboardSummary() (*domain.DashboardSummary, error) {
+    summary := &domain.DashboardSummary{Currency: "USD"} // Asumimos USD por ahora
+
+    // Consulta para sumar totales por estado
+    query := `
+        SELECT 
+            COALESCE(SUM(CASE WHEN is_conciliated = true THEN amount ELSE 0 END), 0) as reconciled,
+            COALESCE(SUM(CASE WHEN is_conciliated = false THEN amount ELSE 0 END), 0) as pending_mov
+        FROM movements`
+    
+    err := r.db.QueryRow(query).Scan(&summary.TotalReconciled, &summary.PendingMovements)
+    if err != nil {
+        return nil, err
+    }
+
+    // Consulta para sumar facturas pendientes
+    queryInv := `SELECT COALESCE(SUM(amount), 0) FROM invoices WHERE status = 'PENDING'`
+    err = r.db.QueryRow(queryInv).Scan(&summary.PendingInvoices)
+    if err != nil {
+        return nil, err
+    }
+
+    return summary, nil
+}

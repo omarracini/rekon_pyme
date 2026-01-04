@@ -26,9 +26,18 @@ func main() {
 	concUseCase := application.NewConciliateUseCase(repo)
 	pendUseCase := application.NewGetPendingItemsUseCase(repo)
 	getPendingUC := application.NewGetPendingMovementsUseCase(repo)
+	getPendingInvUC := application.NewGetPendingInvoicesUseCase(repo)
+	getDashboardUC := application.NewGetDashboardUseCase(repo)
 
 	// Handlers
-	handler := infrastructure.NewMovementHandler(movUseCase, invUseCase, concUseCase, pendUseCase, getPendingUC)
+	handler := infrastructure.NewMovementHandler(
+		movUseCase,
+		invUseCase,
+		concUseCase,
+		pendUseCase,
+		getPendingUC,
+		getPendingInvUC,
+		getDashboardUC)
 
 	// Configuración de Gin
 	r := gin.Default()
@@ -40,6 +49,8 @@ func main() {
 	r.POST("/conciliations", handler.Conciliate)
 	r.GET("/pending", handler.GetPending)
 	r.GET("/movements/pending", handler.GetPending)
+	r.GET("/invoices/pending", handler.GetPendingInvoices)
+	r.GET("/dashboard", handler.GetDashboard)
 
 	log.Println("Servidor iniciado en http://localhost:8080")
 

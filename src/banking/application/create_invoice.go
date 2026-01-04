@@ -1,6 +1,7 @@
 package application
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,6 +26,16 @@ func NewCreateInvoiceUseCase(repo domain.BankRepository) *CreateInvoiceUseCase {
 }
 
 func (uc *CreateInvoiceUseCase) Execute(req CreateInvoiceRequest) error {
+	// Validar monto
+	if req.Amount <= 0 {
+        return errors.New("el monto de la factura debe ser mayor a cero")
+    }
+
+    // Validar moneda
+    if req.Currency == "" {
+        return errors.New("el tipo de moneda es obligatorio")
+    }
+
 	// Parsear la fecha de vencimiento
 	dueDate, _ := time.Parse("2006-01-02", req.DueDate)
 

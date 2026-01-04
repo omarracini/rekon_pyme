@@ -8,26 +8,34 @@ import (
 	"github.com/omarracini/rekon_pyme/src/banking/application"
 )
 
+// Argumentos
 type MovementHandler struct {
 	movementuseCase   *application.CreateMovementUseCase
 	invoiceUseCase    *application.CreateInvoiceUseCase
 	conciliateUseCase *application.ConciliateUseCase
 	pendingUseCase    *application.GetPendingItemsUseCase
 	getPendingUC      *application.GetPendingMovementsUseCase
+	getPendingInvUC   *application.GetPendingInvoicesUseCase
+	getDashboardUC    *application.GetDashboardUseCase
 }
 
+// Constructor
 func NewMovementHandler(
 	muc *application.CreateMovementUseCase,
 	iuc *application.CreateInvoiceUseCase,
 	cuc *application.ConciliateUseCase,
 	puc *application.GetPendingItemsUseCase,
-	gpuc *application.GetPendingMovementsUseCase) *MovementHandler {
+	gpuc *application.GetPendingMovementsUseCase,
+	gpiuc *application.GetPendingInvoicesUseCase,
+	gduc *application.GetDashboardUseCase) *MovementHandler {
 	return &MovementHandler{
 		movementuseCase:   muc,
 		invoiceUseCase:    iuc,
 		conciliateUseCase: cuc,
 		pendingUseCase:    puc,
 		getPendingUC:      gpuc,
+		getPendingInvUC:   gpiuc,
+		getDashboardUC:    gduc,
 	}
 }
 
@@ -94,4 +102,22 @@ func (h *MovementHandler) GetPending(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, movements)
+}
+
+func (h *MovementHandler) GetPendingInvoices(c *gin.Context) {
+	invoices, err := h.getPendingInvUC.Execute()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se lograron obtener las facturas pendientes"})
+		return
+	}
+	c.JSON(http.StatusOK, invoices)
+}
+
+func (h *MovementHandler) GetDashboard(c *gin.Context) {
+	summary, err := h.getDashboardUC.Execute()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, summary)
 }

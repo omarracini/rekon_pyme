@@ -15,4 +15,5 @@ type BankRepository interface {
 	FindMovementByID(id string) (*BankMovement, error)
 	FindInvoiceByID(id string) (*Invoice, error)
 	GetUnconciliatedMovements() ([]*BankMovement, error)
+	GetDashboardSummary() (*DashboardSummary, error)
 }
