@@ -28,6 +28,18 @@ export default function Home() {
     }
   };
 
+  const handleAISuggest = async () => {
+    if (!concept) return;
+    try {
+      // Llamamos al endpoint de Go
+      const res = await fetch(`http://localhost:8080/ai/suggest-category?concept=${encodeURIComponent(concept)}`);
+      const data = await res.json();
+      setAiSuggestion(data);
+    } catch (error) {
+      console.error("Error en IA:", error);
+    }
+  };
+
   useEffect(() => {
     fetchDashboard();
   }, []);
@@ -49,52 +61,90 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Tarjetas de Saldo */}
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        {summary.map((item, index) => {
-          // Usamos los nombres exactos de tu JSON de Go
-          const currency = item.currency || 'USD';
-          const amount = item.pending_movements_amount || 0; // Mostramos lo pendiente
-          const reconciled = item.total_reconciled || 0;
+      {/* Contenedor Principal Superior */}
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+        
+        {/* Sección Izquierda: Tarjetas de Saldo (Ocupa 2 columnas en desktop) */}
+        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {summary.map((item, index) => {
+            const currency = item.currency || 'USD';
+            const amount = item.pending_movements_amount || 0;
+            const reconciled = item.total_reconciled || 0;
 
-          return (
-            <div key={currency + index} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                  <Wallet size={24} />
+            return (
+              <div key={currency + index} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                    <Wallet size={20} />
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 uppercase tracking-wider">
+                    Conciliado: {new Intl.NumberFormat('es-CO').format(reconciled)}
+                  </span>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700 uppercase">
-                  Conciliado: {new Intl.NumberFormat('es-CO').format(reconciled)}
-                </span>
+                <div>
+                  <p className="text-gray-400 text-xs font-semibold uppercase mb-1">{currency}</p>
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    {new Intl.NumberFormat('es-CO', { 
+                      style: 'currency', 
+                      currency: currency.length === 3 ? currency : 'USD' 
+                    }).format(amount)}
+                  </h3>
+                </div>
               </div>
-              <p className="text-gray-500 text-sm font-medium">Pendiente ({currency})</p>
-              <h3 className="text-2xl font-bold text-gray-900">
-                {new Intl.NumberFormat('es-CO', { 
-                  style: 'currency', 
-                  currency: currency.length === 3 ? currency : 'USD' 
-                }).format(amount)}
-              </h3>
+            );
+          })}
+        </div>
+
+        {/* Sección Derecha: Asistente de IA (Ocupa 1 columna) */}
+        <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between border border-blue-500 relative overflow-hidden">
+          {/* Decoración de fondo */}
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+          
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <BrainCircuit size={24} className="text-blue-100" />
+              <h3 className="font-bold text-lg">Asistente IA</h3>
             </div>
-          );
-        })}
+            
+            <p className="text-blue-100 text-xs mb-4 leading-relaxed">
+              Ingresa un concepto para clasificarlo automáticamente.
+            </p>
+
+            <input 
+              type="text" 
+              placeholder="Ej: Pago AWS..."
+              className="w-full p-3 rounded-xl text-gray-900 text-sm mb-3 border-none focus:ring-2 focus:ring-blue-300 outline-none shadow-inner"
+              value={concept}
+              onChange={(e) => setConcept(e.target.value)}
+            />
+            
+            <button 
+              onClick={handleAISuggest}
+              className="w-full bg-white text-blue-600 py-2.5 rounded-xl font-bold hover:bg-blue-50 transition-all flex items-center justify-center gap-2 text-sm shadow-md active:scale-95"
+            >
+              Consultar IA
+            </button>
+          </div>
+
+          {/* Resultado de la IA */}
+          {aiSuggestion && (
+            <div className="mt-4 p-3 bg-white/10 rounded-xl text-[12px] border border-white/20 animate-in fade-in zoom-in duration-300">
+              <div className="flex justify-between mb-1">
+                <span className="opacity-70 font-medium">Categoría:</span>
+                <span className="font-bold">{aiSuggestion.category}</span>
+              </div>
+              <div className="w-full bg-white/20 h-1.5 rounded-full mt-2">
+                <div 
+                  className="bg-green-400 h-1.5 rounded-full transition-all duration-500" 
+                  style={{ width: `${(aiSuggestion.confidence * 100)}%` }}
+                ></div>
+              </div>
+              <p className="italic mt-2 opacity-80 leading-tight">"{aiSuggestion.reason}"</p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Sección de IA (Placeholder para el siguiente paso) */}
-      <div className="max-w-6xl mx-auto bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 text-white flex flex-col md:flex-row items-center justify-between shadow-lg">
-        <div className="mb-6 md:mb-0">
-          <div className="flex items-center gap-2 mb-2">
-            <BrainCircuit size={24} />
-            <span className="font-semibold uppercase tracking-wider text-sm opacity-80">Módulo de IA Activo</span>
-          </div>
-          <h2 className="text-2xl font-bold">Categorizador Inteligente</h2>
-          <p className="opacity-90 max-w-md mt-2">Prueba el servicio de IA para clasificar automáticamente tus movimientos bancarios.</p>
-        </div>
-        <div className="bg-white/10 p-4 rounded-xl backdrop-blur-md border border-white/20">
-            <button className="bg-white text-blue-600 px-6 py-3 rounded-lg font-bold hover:bg-blue-50 transition flex items-center gap-2">
-               Abrir Asistente <ArrowUpRight size={20} />
-            </button>
-        </div>
-      </div>
       {/* Tabla de Movimientos */}
       <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mt-10">
         <div className="p-6 border-b border-gray-100">
