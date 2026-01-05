@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Wallet, BrainCircuit, RefreshCw, ArrowUpRight } from 'lucide-react';
+import { Wallet, BrainCircuit, RefreshCw, ArrowUpRight, CheckCircle, Clock } from 'lucide-react';
 import { DashboardSummary } from '@/types/banking';
 
 export default function Home() {
@@ -37,6 +37,36 @@ export default function Home() {
       setAiSuggestion(data);
     } catch (error) {
       console.error("Error en IA:", error);
+    }
+  };
+
+  const handleConciliate = async (movementId: string) => {
+    try {
+      const response = await fetch('http://localhost:8080/conciliations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          movement_id: movementId,
+          invoice_id: "", 
+          status: "CONCILIATED" 
+        }),
+      });
+
+      if (response.ok) {
+        await fetchDashboard();
+        alert("Conciliado correctamente");
+      } else {
+        const errorData = await response.json();
+        console.error("Detalle del error:", errorData.error);
+
+        if (errorData.error.includes("factura")) {
+          alert("El sistema requiere una factura vinculada para conciliar este movimiento.");
+        } else {
+          alert("Error: " + errorData.error);
+        }
+      }
+    } catch (error) {
+      console.error("Error de red:", error);
     }
   };
 
@@ -161,33 +191,41 @@ export default function Home() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {movements.map((mov, index) => {
-                // 1. Extraemos el valor del objeto Money (ajustado a la serialización de Go)
-                // Probamos con 'Amount' (mayúscula) y 'amount' (minúscula)
-                const montoReal = mov.Amount?.Amount || mov.Amount?.amount || mov.Amount?.Value || 0;
-                
-                // 2. Extraemos la moneda del objeto Money
-                const monedaReal = mov.Amount?.Currency || mov.Amount?.currency || mov.Currency || 'USD';
+            {movements.map((mov, index) => {
+              const montoReal = mov.Amount?.Amount || mov.Amount?.amount || mov.Amount?.Value || 0;
+              const monedaReal = mov.Amount?.Currency || mov.Amount?.currency || mov.Currency || 'USD';
+              // Mapeamos el ID y el estado según tu BankMovement struct
+              const movementId = mov.ID || mov.id;
+              const estaConciliado = mov.IsConciliated || mov.is_conciliated;
 
-                return (
-                  <tr key={index} className="hover:bg-gray-50 transition text-sm">
-                    <td className="px-6 py-4 font-medium text-gray-900">{mov.Concept || mov.concept}</td>
-                    <td className={`px-6 py-4 font-bold ${montoReal < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {new Intl.NumberFormat('es-CO', { 
-                        style: 'currency', 
-                        currency: monedaReal.length === 3 ? monedaReal : 'USD' 
-                      }).format(montoReal)}
-                    </td>
-                    <td className="px-6 py-4 text-gray-500">{monedaReal}</td>
-                    <td className="px-6 py-4 text-center text-xs">
-                      <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-md font-bold uppercase">
-                        {mov.IsConciliated ? 'Conciliado' : 'Pendiente'}
+              return (
+                <tr key={index} className="hover:bg-gray-50 transition text-sm">
+                  <td className="px-6 py-4 font-medium text-gray-900">{mov.Concept || mov.concept}</td>
+                  <td className={`px-6 py-4 font-bold ${montoReal < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {new Intl.NumberFormat('es-CO', { 
+                      style: 'currency', 
+                      currency: monedaReal.length === 3 ? monedaReal : 'USD' 
+                    }).format(montoReal)}
+                  </td>
+                  <td className="px-6 py-4 text-gray-500">{monedaReal}</td>
+                  <td className="px-6 py-4 text-center">
+                    {estaConciliado ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-md font-bold text-[10px] uppercase">
+                        <CheckCircle size={12} /> Conciliado
                       </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
+                    ) : (
+                      <button
+                        onClick={() => handleConciliate(movementId)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-100 text-yellow-700 hover:bg-yellow-200 rounded-md font-bold text-[10px] uppercase transition-colors shadow-sm active:scale-95"
+                      >
+                        <Clock size={12} /> Pendiente
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
           </table>
         </div>
       </div>
